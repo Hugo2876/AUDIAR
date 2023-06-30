@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Observatoire - Énergie</title>
+  <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css'>
+  <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@3.0.1/dist/maplibre-gl.css'>
+  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css'>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+
+<body>
+  <html>
+
+  <head>
+    <title>obs-conso</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+
+  <!--
+    <div id="loading">
+      <h1 style="font-size: 2em; margin-top: 50px;">Consommations énergétiques de réseau à Rennes Métropole</h1>
+      <div class="loader"></div>
+      <div class="loading-text-wrapper">
+        <h3 id="loading-text"></h3>
+      </div>
+      <button id="prev-button" class="nav-button"><i class="fas fa-chevron-left"></i></button>
+      <button id="next-button" class="nav-button"><i class="fas fa-chevron-right"></i></button>
+      <button id="skip-button" class="btn btn-custom btn-active" style="margin-top: 40px; text-align: center; visibility: hidden;">Accéder à l'observatoire</button>
+      <h4 id="redirect-text" style="visibility: hidden;"></h4>
+    </div>  
+    -->
+
+  <header>
+    <h1>Consommations énergétiques de réseau à Rennes Métropole</h1>
+    <div id="buttons-header">
+      <button id="help-button" class="btn btn-help">Documentation</button>
+      <p>|</p>
+      <select class="btn btn-help" id="download-options" style="width: 200px">
+        <optgroup label="Données complètes">
+          <option value="complete-csv">Format .csv</option>
+          <option value="complete-xls">Format .xls</option>
+          <option value="complete-json">Format .json</option>
+        </optgroup>
+        <optgroup label="Données filtrées">
+          <option value="filtered-csv">Format .csv</option>
+          <option value="filtered-xls">Format .xls</option>
+          <option value="filtered-json">Format .json</option>
+        </optgroup>
+      </select>
+    </div>
+  </header>
+  <div id="popup" class="popup">
+    <div class="popup-content">
+      <h3>Contexte du projet</h3>
+      <p id="popup-text">En vous permettant de naviguer à travers ces données de consommations énergétiques, l'Audiar
+        possède deux objectifs. Le premier est d'alerter les élus et les décideurs métropolitains et communaux aux
+        enjeux de la planification et de la transition énergétique. En effet, dans un contexte de changement
+        climatique, les territoires ont la nécessité de diminuer les consommations énergétiques de leurs
+        installations. Aussi, puisque cet outil est accessible à quiconque souhaite y accéder, le second objectif est
+        de sensibiliser le grand public aux enjeux de sobriété et d'efficacité énergétique.</p>
+      <button id="close-button" class="btn btn-close">Fermer</button>
+    </div>
+  </div>
+  <div id="info" style="padding-left: 5px; margin-top: 5px;">Survolez une entité pour faire apparaître ses
+    informations de consommations énergétiques
+  </div>
+
+
+  <div class="container">
+    <div class="sidebar">
+
+      <div class="legend-block">
+        <h3>Consommation totale (MWh)</h3>
+        <div class="legend-container" id="legendTot">
+        </div>
+        <br>
+        <h3>Consommation moyenne (MWh/abonné)</h3>
+        <div class="legend-container" id="legendAbo">
+        </div>
+      </div>
+
+
+      <div class="sidebar-content">
+        <h3>Territoires</h3>
+        <button id="show_communes" class="btn btn-custom btn-active">Communes</button>
+        <br>
+        <select id="commune-selector" style="display: none;"></select>
+        <br>
+        <br>
+        <button id="show_iris" class="btn btn-custom">IRIS</button>
+        <br>
+        <select id="iris-selector" style="display: none;"></select>
+        <br>
+        <br>
+
+        <h3>Correction climatique</h3>
+        <label class="custom-checkbox" for="climat-checkbox">
+          <input type="checkbox" id="climat-checkbox" checked>
+          <span class="checkmark"></span>
+          Données corrigées
+        </label>
+        <br>
+        <br>
+
+        <h3>Énergies</h3>
+        <h4>Plusieurs choix sont possibles</h4>
+        <select id="filiere-select" class="selector" multiple>
+        </select>
+        <br>
+        <br>
+
+        <h3>Secteurs</h3>
+        <h4>Plusieurs choix sont possibles</h4>
+        <select id="type-select" class="selector" multiple>
+        </select>
+        <br>
+        <br>
+
+        <h3>Années</h3>
+        <input type="text" id="year-range-slider" name="year-range-slider" value="" />
+
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="map" class="map-container"></div>
+  </div>
+
+  <div class="slider-container">
+    <button id="slider-button" class="btn btn-custom">Masquer les dataviz</button>
+    <div id="slider">
+      <div id="info-banner">
+        <div id="selected-territory">Rennes Métropole</div>
+        <div id="selected-period">2010 - 2021</div>
+        <div id="selected-climat">Données non corrigées du climat</div>
+      </div>
+      <div class="main-container">
+        <div class="key-stats-container1">
+          <h3 class="section-title">Évolution de la consommation par secteur</h3>
+          <div id="key-stats">
+            <div class="stat-item">
+              <div class="image-container" id="residential-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/residential.svg" alt="Residential Icon"
+                  width="50" height="50">
+                <p>Résidentiel</p>
+                <p id="residential-evolution"></p>
+              </div>
+              <div class="image-container" id="industrial-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/industrial.svg" alt="Industrial Icon"
+                  width="50" height="50">
+                <p>Industriel</p>
+                <p id="industrial-evolution"></p>
+              </div>
+              <div class="image-container" id="tertiary-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/tertiary.svg" alt="Tertiary Icon"
+                  width="50" height="50">
+                <p>Tertiaire</p>
+                <p id="tertiary-evolution"></p>
+              </div>
+              <div class="image-container" id="agricol-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/agricol.svg" alt="Agricol Icon"
+                  width="50" height="50">
+                <p>Agricole</p>
+                <p id="agricol-evolution"></p>
+              </div>
+              <div class="image-container" id="secteur-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/equal.svg" alt="Residential Icon"
+                  width="50" height="50">
+                <p>Total</p>
+                <p id="secteur-evolution"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="key-stats-container2">
+          <h3 class="section-title">Évolution de la consommation par énergie</h3>
+          <div id="key-stats2">
+            <div class="stat-item">
+              <div class="image-container" id="gas-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/gas.svg" alt="Gas Icon" width="50"
+                  height="50">
+                <p>Gaz</p>
+                <p id="gas-evolution"></p>
+              </div>
+              <div class="image-container" id="electricity-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/electricity.svg" alt="Electricity Icon"
+                  width="50" height="50">
+                <p>Électricité</p>
+                <p id="electricity-evolution"></p>
+              </div>
+              <div class="image-container" id="all-container">
+                <img src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/equal.svg" alt="Gas Icon" width="50"
+                  height="50">
+                <p>Total</p>
+                <p id="all-evolution"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="AreaStacked1" class="evo-secteur">
+        <canvas id="AreaStackedSecteur"></canvas>
+        <div id="noDataContainer1" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <div id="AreaStacked2" class="evo-type">
+        <canvas id="AreaStackedType"></canvas>
+        <div id="noDataContainer2" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <br>
+      <div id="LineStacked1" class="evo-secteur">
+        <canvas id="LineStackedSecteur"></canvas>
+        <div id="noDataContainer3" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <div id="LineStacked2" class="evo-type">
+        <canvas id="LineStackedType"></canvas>
+        <div id="noDataContainer4" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <br>
+      <div id="DonutContainer" class="evo-type">
+        <h3>Consommation par secteur</h3>
+        <canvas id="DonutSecteur"></canvas>
+        <div id="noDataContainer5" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <div id="DonutContainer2" class="evo-secteur">
+        <h3>Consommation par énergie</h3>
+        <canvas id="DonutType"></canvas>
+        <div id="noDataContainer6" class="noDataContainer" style="display: none;">
+          <img class="noDataImage" src="https://raw.githubusercontent.com/Hugo2876/AUDIAR/main/data-error.svg"
+            alt="No data available" style="width: 90%; height: 100%;" />
+          <p class="noDataMessage">Aucune consommation pour l'entité sélectionnée</p>
+        </div>
+      </div>
+      <br><br><br><br>
+    </div>
+  </div>
+  </div>
+
+</body>
+
+</html>
+<script src='https://code.jquery.com/jquery-3.6.0.min.js'></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ion-rangeslider@2.3.1/css/ion.rangeSlider.min.css">
+<script src="https://cdn.jsdelivr.net/npm/ion-rangeslider@2.3.1/js/ion.rangeSlider.min.js"></script>
+<script src='https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.20/lodash.min.js"></script>
+<script src='https://unpkg.com/maplibre-gl@3.0.1/dist/maplibre-gl.js'></script>
+<script src="https://unpkg.com/@turf/turf@5/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src='https://unpkg.com/simple-statistics@7.1.0/dist/simple-statistics.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script src="./script.js"></script>
+
+</body>
+
+</html>
